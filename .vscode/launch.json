@@ -1,0 +1,47 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug: Restaurant Management System",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "127.0.0.1",
+        "port": 5679
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "${workspaceFolder}"
+        }
+      ],
+      "preLaunchTask": "Open Agent Inspector",
+      "presentation": {
+        "hidden": false,
+        "group": "Restaurant Agents",
+        "order": 1
+      }
+    },
+    {
+      "name": "Debug: Run in Terminal (no Inspector)",
+      "type": "debugpy",
+      "request": "attach",
+      "connect": {
+        "host": "127.0.0.1",
+        "port": 5679
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "${workspaceFolder}"
+        }
+      ],
+      "preLaunchTask": "Run Agent/Workflow in Terminal",
+      "presentation": {
+        "hidden": false,
+        "group": "Restaurant Agents",
+        "order": 2
+      }
+    }
+  ]
+}

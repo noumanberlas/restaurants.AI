@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: restaurant-management-system
+
+services:
+  host-agent:
+    project: .
+    language: python
+    host: ai.endpoint
+
+pipeline:
+  provider: github
