@@ -15,10 +15,15 @@ setup_observability()
 
 from src.agents.host_agent import HostAgent
 from src.config import get_settings
-from src.database import Base, engine
+from src.database import Base, engine, ensure_tables
 
-# Create all tables on startup (no-op if they already exist)
-Base.metadata.create_all(bind=engine)
+settings = get_settings()
+if settings.use_table_storage():
+    ensure_tables(settings.table_storage_connection_string)
+else:
+    # Create all tables on startup (no-op if they already exist)
+    Base.metadata.create_all(bind=engine)
+
 
 logging.basicConfig(
     level=getattr(logging, get_settings().log_level.upper(), logging.INFO),

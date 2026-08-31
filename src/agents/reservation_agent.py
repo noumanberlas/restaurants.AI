@@ -34,6 +34,12 @@ class ReservationAgent(BaseRestaurantAgent):
             cancel_reservation,
         ]
 
-    def _middleware(self) -> list:
-        return [SkillsProvider([ReservationSkill()])]
+    def _context_providers(self) -> list:
+        return [
+            SkillsProvider(
+                [ReservationSkill()],
+                disable_load_skill_approval=True,
+                disable_read_skill_resource_approval=True,
+            )
+        ]
 

@@ -44,7 +44,21 @@ class HostAgent(BaseRestaurantAgent):
         )
 
         # Build the handoff workflow using the AF orchestration builder
-        self._workflow = (
+        self._workflow = self.build_workflow()
+
+        logger.info(
+            "HostAgent + HandoffBuilder ready | provider=%s | model=%s",
+            settings.model_provider.value,
+            model,
+        )
+
+    def build_workflow(self):
+        """Build a handoff workflow over the existing agents.
+
+        A Workflow carries run state, so hosted request/response callers need a new
+        one per turn while reusing the agents.
+        """
+        return (
             HandoffBuilder(
                 name="restaurant_management_handoff",
                 participants=[
@@ -85,7 +99,15 @@ class HostAgent(BaseRestaurantAgent):
             "  • reservation_agent — table bookings and seating\n"
             "  • inventory_agent   — stock levels and low-stock alerts\n\n"
             "Hand off immediately; do not answer domain questions yourself. "
-            "When the specialist finishes, they will hand control back to you."
+            "When the specialist finishes, they will hand control back to you.\n\n"
+            # Each turn re-enters here and re-routes from scratch, so a bare reply
+            # like "yes" has no domain signal of its own.
+            "If the newest user message is a short reply that only makes sense as a "
+            "continuation (for example 'yes', 'go ahead', 'the second one', a bare "
+            "name or number), it belongs to the conversation already in progress: "
+            "hand off to the same specialist that spoke most recently in the "
+            "transcript. Never switch specialists on a follow-up unless the user "
+            "clearly raises a new topic."
         )
 
     def _tools(self) -> list:

@@ -1,12 +1,42 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
 
 name: restaurant-management-system
-
 services:
-  host-agent:
+  nb-ai-chatbot-project:
+    host: azure.ai.project
+    endpoint: https://nb-ai-chatbot-project-foundry.services.ai.azure.com/api/projects/nb-ai-chatbot-project
+  restaurant-host-agent:
     project: .
+    host: azure.ai.agent
     language: python
-    host: ai.endpoint
-
+    uses:
+      - nb-ai-chatbot-project
+    codeConfiguration:
+      dependencyResolution: remote_build
+      entryPoint: agent_main.py
+      runtime: python_3_13
+    # Local `azd ai agent run` only; remote deploy uses codeConfiguration.entryPoint
+    startupCommand: .venv/Scripts/python.exe agent_main.py
+    container:
+      resources:
+        cpu: "0.5"
+        memory: 1.0Gi
+    kind: hosted
+    name: restaurant-host-agent
+    description: Restaurant management coordinator that hands off to menu, order,
+      reservation, and inventory specialists.
+    protocols:
+      - protocol: responses
+        version: 2.0.0
+    env:
+      MODEL_PROVIDER: foundry
+      FOUNDRY_PROJECT_ENDPOINT: ${FOUNDRY_PROJECT_ENDPOINT}
+      AZURE_AI_MODEL_DEPLOYMENT_NAME: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}
+      FOUNDRY_MODEL: ${AZURE_AI_MODEL_DEPLOYMENT_NAME}
+      TABLE_STORAGE_CONNECTION_STRING: ${TABLE_STORAGE_CONNECTION_STRING}
+infra:
+  provider: microsoft.foundry
 pipeline:
   provider: github
+  variables: []
+  secrets: []

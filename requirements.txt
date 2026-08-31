@@ -6,6 +6,9 @@ agent-framework-foundry==1.11.0
 agent-framework-openai==1.14.1
 agent-framework-orchestrations==1.1.1
 
+# Foundry hosted-agent runtime (ResponsesHostServer)
+agent-framework-foundry-hosting>=1.0.0b260827
+
 # Azure identity (Foundry auth via DefaultAzureCredential / AzureCliCredential)
 azure-identity>=1.17.0
 
@@ -23,6 +26,9 @@ uvicorn[standard]>=0.30.0
 
 # Data / persistence stubs (swap out as needed)
 sqlalchemy>=2.0.0
+
+# Azure Table Storage (used as the persistence layer when MODEL_PROVIDER=foundry)
+azure-data-tables>=12.5.0
 
 # Observability & tracing
 azure-monitor-opentelemetry>=1.6.0

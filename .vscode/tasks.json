@@ -12,7 +12,7 @@
     {
       "label": "Run Agent/Workflow HTTP Server",
       "type": "shell",
-      "command": ".venv/Scripts/python.exe -m debugpy --listen 127.0.0.1:5679 -m src.main",
+      "command": ".venv/Scripts/python.exe -m debugpy --listen 127.0.0.1:5679 agent_main.py",
       "isBackground": true,
       "options": {
         "cwd": "${workspaceFolder}"
@@ -23,7 +23,7 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": ".*",
-          "endsPattern": "Application startup complete|[Rr]unning on|Started server process"
+          "endsPattern": "AgentServerHost started|Application startup complete|[Rr]unning on|Started server process"
         }
       }
     },
@@ -37,7 +37,7 @@
     {
       "label": "Run Agent/Workflow in Terminal",
       "type": "shell",
-      "command": ".venv/Scripts/python.exe -m debugpy --listen 127.0.0.1:5679 -m src.main",
+      "command": ".venv/Scripts/python.exe -m debugpy --listen 127.0.0.1:5679 agent_main.py",
       "isBackground": true,
       "options": {
         "cwd": "${workspaceFolder}"
@@ -47,7 +47,7 @@
         "background": {
           "activeOnStart": true,
           "beginsPattern": ".*",
-          "endsPattern": "Application startup complete|[Rr]unning on|Started server process"
+          "endsPattern": "AgentServerHost started|Application startup complete|[Rr]unning on|Started server process"
         }
       }
     },

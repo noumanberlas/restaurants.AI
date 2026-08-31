@@ -27,7 +27,12 @@ class MenuAgent(BaseRestaurantAgent):
         return (
             "You are the Menu Manager for a restaurant. "
             "You help staff add, update, remove, and query menu items. "
-            "Load the menu-skill for full business rules before acting."
+            "Load the menu-skill for full business rules before acting.\n\n"
+            "Do not ask the user to confirm an add or update when they already gave "
+            "you the required fields (name, price, category for adds). Call the tool "
+            "immediately in the same turn and report what you did as a completed fact. "
+            "Only ask a question when a required field is actually missing, or when "
+            "permanently deleting an item."
         )
 
     def _tools(self) -> list:
@@ -36,6 +41,12 @@ class MenuAgent(BaseRestaurantAgent):
         # not calling it). AF inspects their signatures to build the JSON tool schema.
         return [get_menu, add_menu_item, update_menu_item_availability, remove_menu_item]
 
-    def _middleware(self) -> list:
+    def _context_providers(self) -> list:
         # SkillsProvider wraps the skill and injects it into the agent's context
-        return [SkillsProvider([MenuSkill()])]
+        return [
+            SkillsProvider(
+                [MenuSkill()],
+                disable_load_skill_approval=True,
+                disable_read_skill_resource_approval=True,
+            )
+        ]

@@ -8,7 +8,12 @@ Foundry models and local Ollama models via `.env`.
 
 **Language:** Python 3.11+  
 **Virtual env:** `.venv/` at project root  
-**Entry point:** `src/main.py` (FastAPI, port 8088)
+**Entry points:** `src/main.py` (FastAPI dev host, port 8088) and `agent_main.py`
+(Foundry hosted agent, Responses protocol, port 8088)
+
+This project was built with the microsoft-foundry skill. Before working on or
+answering questions about foundry agents, read the microsoft-foundry skill first.
+If you are in VS Code, read the vscode-microsoft-foundry skill first.
 
 ## Setup
 
@@ -22,8 +27,16 @@ copy .env.example .env   # then fill in credentials
 ## Run
 
 ```powershell
-.venv\Scripts\python.exe -m src.main
+.venv\Scripts\python.exe -m src.main        # FastAPI dev host
+.venv\Scripts\python.exe agent_main.py      # Foundry hosted agent (Responses protocol)
 ```
+
+## Foundry hosted agent
+
+- `azure.yaml` service `restaurant-host-agent` (`host: azure.ai.agent`, entry point `agent_main.py`)
+- Bound to the existing project `nb-ai-chatbot-project`; model deployment `gpt-4o`
+- Local invoke: `azd ai agent invoke --local "<message>"`
+- Deploy: `azd deploy` (requires the `Cognitive Services User` role on the Foundry account)
 
 ## Test
 
@@ -41,8 +54,9 @@ pytest tests/
 
 ## Key conventions
 
-- `MODEL_PROVIDER=foundry` → `FoundryChatClient` (DefaultAzureCredential, env: `FOUNDRY_PROJECT_ENDPOINT` + `FOUNDRY_MODEL`)
+- `MODEL_PROVIDER=foundry` → `FoundryChatClient` (DefaultAzureCredential, env: `FOUNDRY_PROJECT_ENDPOINT` + `FOUNDRY_MODEL`); when `FOUNDRY_API_KEY` is set, key-based Azure OpenAI auth is used instead
 - `MODEL_PROVIDER=ollama`  → `OpenAIChatClient` using `OLLAMA_ENDPOINT/v1` (env: `OLLAMA_ENDPOINT` + `OLLAMA_MODEL`)
+- Data layer: Azure Table Storage when `MODEL_PROVIDER=foundry` **and** `TABLE_STORAGE_CONNECTION_STRING` is set; otherwise SQLite via SQLAlchemy
 - Tools are **plain Python functions** with `Annotated` type hints — AF generates the tool schema automatically
 - Each agent extends `BaseRestaurantAgent` and lives in `src/agents/<domain>_agent.py`
 - `HostAgent` uses AF `HandoffOrchestration` to route to specialist agents

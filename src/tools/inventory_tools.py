@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-"""Inventory tools — persisted via SQLAlchemy."""
+"""Inventory tools — persisted via SQLAlchemy (default) or Azure Table Storage
+(when MODEL_PROVIDER=foundry and TABLE_STORAGE_CONNECTION_STRING is set)."""
 
-from typing import Annotated
+from typing import Annotated, Optional
 from uuid import uuid4
 
 from pydantic import Field
 
-from src.database import InventoryItemDB, get_session
+from src.config import get_settings
+from src.database import InventoryItemDB, InventoryTableRepository, get_session, get_table_storage
 
 
 def _row_to_dict(row: InventoryItemDB) -> dict:
@@ -20,14 +22,27 @@ def _row_to_dict(row: InventoryItemDB) -> dict:
     }
 
 
+def _repo() -> Optional[InventoryTableRepository]:
+    settings = get_settings()
+    if settings.use_table_storage():
+        return InventoryTableRepository(get_table_storage(settings.table_storage_connection_string))
+    return None
+
+
 def get_inventory() -> list[dict]:
     """Retrieve the full inventory list."""
+    repo = _repo()
+    if repo:
+        return repo.list()
     with get_session() as session:
         return [_row_to_dict(row) for row in session.query(InventoryItemDB).all()]
 
 
 def get_low_stock_items() -> list[dict]:
     """Return items whose quantity is at or below their reorder threshold."""
+    repo = _repo()
+    if repo:
+        return repo.list_low_stock()
     with get_session() as session:
         rows = session.query(InventoryItemDB).filter(
             InventoryItemDB.quantity <= InventoryItemDB.reorder_threshold
@@ -44,8 +59,12 @@ def add_stock(
     ] = 0.0,
 ) -> dict:
     """Add a new item to the inventory."""
+    item_id = str(uuid4())
+    repo = _repo()
+    if repo:
+        return repo.create(item_id, name=name, quantity=quantity, unit=unit, reorder_threshold=reorder_threshold)
     row = InventoryItemDB(
-        id=str(uuid4()),
+        id=item_id,
         name=name,
         quantity=quantity,
         unit=unit,
@@ -61,6 +80,9 @@ def update_stock(
     quantity: Annotated[float, Field(description="New quantity on hand")],
 ) -> dict:
     """Update the quantity of an existing inventory item."""
+    repo = _repo()
+    if repo:
+        return repo.update_quantity(item_id, quantity)
     with get_session() as session:
         row = session.get(InventoryItemDB, item_id)
         if not row:

@@ -28,6 +28,12 @@ class OrderAgent(BaseRestaurantAgent):
     def _tools(self) -> list:
         return [create_order, get_order, list_orders, update_order_status, cancel_order]
 
-    def _middleware(self) -> list:
-        return [SkillsProvider([OrderSkill()])]
+    def _context_providers(self) -> list:
+        return [
+            SkillsProvider(
+                [OrderSkill()],
+                disable_load_skill_approval=True,
+                disable_read_skill_resource_approval=True,
+            )
+        ]
 

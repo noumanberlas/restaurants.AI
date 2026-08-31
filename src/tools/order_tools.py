@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-"""Order tools — persisted via SQLAlchemy."""
+"""Order tools — persisted via SQLAlchemy (default) or Azure Table Storage
+(when MODEL_PROVIDER=foundry and TABLE_STORAGE_CONNECTION_STRING is set)."""
 
+from datetime import datetime
 from typing import Annotated, Optional
 from uuid import uuid4
 
 from pydantic import Field
 
-from src.database import OrderDB, OrderItemDB, get_session
+from src.config import get_settings
+from src.database import OrderDB, OrderItemDB, OrderTableRepository, get_session, get_table_storage
 from src.models import OrderStatus
 
 
@@ -30,6 +33,13 @@ def _row_to_dict(row: OrderDB) -> dict:
     }
 
 
+def _repo() -> Optional[OrderTableRepository]:
+    settings = get_settings()
+    if settings.use_table_storage():
+        return OrderTableRepository(get_table_storage(settings.table_storage_connection_string))
+    return None
+
+
 def create_order(
     table_number: Annotated[int, Field(description="Table number placing the order")],
     items: Annotated[
@@ -38,7 +48,25 @@ def create_order(
     ],
 ) -> dict:
     """Place a new order for a table."""
-    order = OrderDB(id=str(uuid4()), table_number=table_number, status="pending", total=0.0)
+    order_id = str(uuid4())
+    repo = _repo()
+    if repo:
+        return repo.create(
+            order_id,
+            table_number=table_number,
+            status="pending",
+            created_at=datetime.utcnow().isoformat(),
+            items=[
+                {
+                    "id": str(uuid4()),
+                    "menu_item_id": i["menu_item_id"],
+                    "quantity": i.get("quantity", 1),
+                    "notes": i.get("notes", ""),
+                }
+                for i in items
+            ],
+        )
+    order = OrderDB(id=order_id, table_number=table_number, status="pending", total=0.0)
     order.items = [
         OrderItemDB(
             id=str(uuid4()),
@@ -58,6 +86,12 @@ def get_order(
     order_id: Annotated[str, Field(description="UUID of the order")],
 ) -> dict:
     """Retrieve an order by its ID."""
+    repo = _repo()
+    if repo:
+        row = repo.get(order_id)
+        if not row:
+            raise KeyError(order_id)
+        return row
     with get_session() as session:
         row = session.get(OrderDB, order_id)
         if not row:
@@ -72,6 +106,9 @@ def list_orders(
     ] = None,
 ) -> list[dict]:
     """List all orders, optionally filtered by status."""
+    repo = _repo()
+    if repo:
+        return repo.list(status=status)
     with get_session() as session:
         query = session.query(OrderDB)
         if status:
@@ -88,6 +125,9 @@ def update_order_status(
 ) -> dict:
     """Advance an order to the next status."""
     OrderStatus(status)  # validate
+    repo = _repo()
+    if repo:
+        return repo.set_status(order_id, status)
     with get_session() as session:
         row = session.get(OrderDB, order_id)
         if not row:
@@ -100,6 +140,9 @@ def cancel_order(
     order_id: Annotated[str, Field(description="UUID of the order to cancel")],
 ) -> dict:
     """Cancel an existing order."""
+    repo = _repo()
+    if repo:
+        return repo.set_status(order_id, OrderStatus.CANCELLED.value)
     with get_session() as session:
         row = session.get(OrderDB, order_id)
         if not row:

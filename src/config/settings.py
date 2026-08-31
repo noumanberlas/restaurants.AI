@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     # ── Microsoft Foundry — read by FoundryChatClient automatically ─────────
     foundry_project_endpoint: str = ""
     foundry_model: str = "gpt-4o"  # default; per-agent fields below override
+    # When set, use key-based Azure OpenAI auth instead of DefaultAzureCredential
+    foundry_api_key: str = ""
 
     foundry_model_menu_agent: str = ""
     foundry_model_order_agent: str = ""
@@ -42,6 +44,10 @@ class Settings(BaseSettings):
     ollama_model_inventory_agent: str = ""
     ollama_model_host_agent: str = ""
 
+    # ── Persistence ─────────────────────────────────────────────────────────
+    # When set (and MODEL_PROVIDER=foundry), Azure Table Storage replaces SQLite
+    table_storage_connection_string: str = ""
+
     # ── Observability ───────────────────────────────────────────────────────
     azure_monitor_connection_string: str = ""
 
@@ -56,6 +62,9 @@ class Settings(BaseSettings):
 
     def is_ollama(self) -> bool:
         return self.model_provider == ModelProvider.OLLAMA
+
+    def use_table_storage(self) -> bool:
+        return self.is_foundry() and bool(self.table_storage_connection_string)
 
     def get_model_for_agent(self, agent_name: str) -> str:
         """Return the per-agent model, falling back to the provider default."""

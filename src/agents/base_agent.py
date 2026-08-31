@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from urllib.parse import urlparse
 
 from agent_framework import Agent, AgentSession
 from agent_framework.foundry import FoundryChatClient
@@ -11,6 +12,12 @@ from azure.identity import DefaultAzureCredential
 from src.config import Settings, get_settings
 
 logger = logging.getLogger(__name__)
+
+
+def _resource_endpoint(project_endpoint: str) -> str:
+    """Derive the base Cognitive Services endpoint from a Foundry project endpoint."""
+    parsed = urlparse(project_endpoint)
+    return f"{parsed.scheme}://{parsed.netloc}/"
 
 
 # ── Module-level factory function (equivalent to a static helper method in C#) ─
@@ -27,6 +34,14 @@ def build_client(
             base_url=endpoint,
             api_key="ollama",
         )
+    if settings.foundry_api_key:
+        # Key-based auth: hits the same resource's Azure OpenAI surface (FoundryChatClient
+        # only supports Entra ID tokens, not API keys).
+        return OpenAIChatClient(
+            model=model,
+            azure_endpoint=_resource_endpoint(settings.foundry_project_endpoint),
+            api_key=settings.foundry_api_key,
+        )
     # Foundry: DefaultAzureCredential covers CLI, managed identity, env vars
     return FoundryChatClient(
         project_endpoint=settings.foundry_project_endpoint,
@@ -41,7 +56,7 @@ class BaseRestaurantAgent:
     """Thin wrapper that composes an agent_framework.Agent.
 
     Subclasses declare *agent_name* and override *_system_prompt*, *_tools*,
-    and optionally *_middleware*. The framework handles schema generation and
+    and optionally *_context_providers*. The framework handles schema generation and
     tool dispatch automatically from plain Python functions.
     """
 
@@ -61,7 +76,7 @@ class BaseRestaurantAgent:
             name=self.agent_name,
             instructions=self._system_prompt(),   # calling overridden method in ctor
             tools=self._tools(),
-            middleware=self._middleware(),
+            context_providers=self._context_providers(),
             # Required by HandoffBuilder — prevents history mismatch on handoff tool calls
             require_per_service_call_history_persistence=True,
         )
@@ -82,8 +97,8 @@ class BaseRestaurantAgent:
     def _tools(self) -> list[Any]:
         return []   # default: no tools; subclasses append their callables here
 
-    def _middleware(self) -> list[Any]:
-        return []   # default: no middleware; subclasses add SkillsProvider etc.
+    def _context_providers(self) -> list[Any]:
+        return []   # default: none; subclasses add SkillsProvider etc.
 
     # ── 'async' methods — like Task<string> in C# / async Task<string> ──────────
     # 'await' inside an async method suspends without blocking a thread

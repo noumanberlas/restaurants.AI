@@ -27,6 +27,12 @@ class InventoryAgent(BaseRestaurantAgent):
     def _tools(self) -> list:
         return [get_inventory, get_low_stock_items, add_stock, update_stock]
 
-    def _middleware(self) -> list:
-        return [SkillsProvider([InventorySkill()])]
+    def _context_providers(self) -> list:
+        return [
+            SkillsProvider(
+                [InventorySkill()],
+                disable_load_skill_approval=True,
+                disable_read_skill_resource_approval=True,
+            )
+        ]
 
